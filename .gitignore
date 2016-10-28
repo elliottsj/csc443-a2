@@ -8,3 +8,6 @@
 /csv2colstore
 /select2
 /select3
+
+/.ipynb_checkpoints/
+/venv/
