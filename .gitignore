@@ -1,4 +1,7 @@
+*.dSYM/
+
 /library.o
+/experiment_fixed_len_sizeof
 /csv2heapfile
 /scan
 /insert
@@ -8,3 +11,6 @@
 /csv2colstore
 /select2
 /select3
+
+/.ipynb_checkpoints/
+/venv/
