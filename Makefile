@@ -29,3 +29,6 @@ select2: select2.cc library.o
  
 select3: select3.cc library.o
     $(CC) -o $@ $< library.o
+
+sync-ellio128:
+	fswatch -e "\.git" . | while read line; do rsync -avz --delete . ellio128@teach.cs.toronto.edu:csc469/csc469-a1; done
