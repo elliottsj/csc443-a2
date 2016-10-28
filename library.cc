@@ -34,3 +34,14 @@ void fixed_len_write(Record *record, void *buf){
         std::memcpy((char*) buf + position, record[j], string_length);
     }
 };
+
+/**
+ * Deserializes `size` bytes from the buffer, `buf`, and
+ * stores the record in `record`.
+ */
+void fixed_len_read(void *buf, int size, Record *record) {
+    int value_length = size / record.size();
+    for (int i = 0; i < record.size(); i++) {
+        memcpy(record[i], ((char *) buf) + i * value_length);
+    }
+}
