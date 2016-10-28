@@ -1,4 +1,7 @@
+*.dSYM/
+
 /library.o
+/experiment_fixed_len_sizeof
 /csv2heapfile
 /scan
 /insert
