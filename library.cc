@@ -31,6 +31,6 @@ void fixed_len_write(Record *record, void *buf){
         // copy the string into the buf
         int string_length = strlen(record[j]);
         int position = (j * string_length);
-        memcpy((char*) buf + position, record[j], string_length);
+        std::memcpy((char*) buf + position, record[j], string_length);
     }
 };
