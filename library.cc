@@ -1,6 +1,7 @@
 #include <numeric>
 #include <vector>
-
+#include <stdlib.h>
+#include <cmath>
 
 typedef const char* V;
 typedef std::vector<V> Record;
@@ -46,17 +47,61 @@ void fixed_len_read(void *buf, int size, Record *record) {
     }
 }
 
-/**
- * Initializes a page using the given slot size
- */
-void init_fixed_len_page(Page *page, int page_size, int slot_size){
 
-};
+typedef struct {
+    void *data; // Points to a byte array (Record).
+    int page_size;
+    int slot_size; // How big a Record is.
+    int directory_offset; // How many slots away from the beginning is our initial Record.
+} Page;
+
 
 /**
  * Calculates the maximal number of records that fit in a page
  */
-int fixed_len_page_capacity(Page *page);
+int fixed_len_page_capacity(Page *page){
+    int num_slots = page->page_size/page->slot_size;
+
+    // in bytes
+    int size_of_directory = num_slots/8;
+
+    // find out how much slots our directory is going to need, round up
+    int number_of_directory_slots = ceil(size_of_directory/8 / page->slot_size);
+
+    return num_slots - number_of_directory_slots;
+};
+
+/**
+ * Initializes a page using the given slot size.
+ * Calculates size of directory and initilizes inside the data. A directory is held
+ * at the end of the data in the Page.
+
+ * Accepts only clean divisions of page_size/slot_size.
+ */
+void init_fixed_len_page(Page *page, int page_size, int slot_size){
+    int num_slots = page_size/slot_size;
+
+    // in bytes
+    int size_of_directory = num_slots/8;
+
+    page->page_size = page_size;
+    page->slot_size = slot_size;
+
+    int total_page_slots = fixed_len_page_capacity(page);
+
+    void *new_data = malloc(page_size);
+    page->data = new_data;
+
+    // insert directory at the end of the page.
+
+    // Initialize the empty directory.
+    // A directory which holds a 0 if a slot is empty or a 1 if the slot has data.
+    for (int i = 0; i < size_of_directory;i++) {
+        char* b = ((char *) page->data) + page_size - size_of_directory + i;
+        *b = 0;
+    }
+};
+
 
 /**
  * Calculate the free space (number of free slots) in the page
