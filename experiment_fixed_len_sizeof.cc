@@ -106,5 +106,6 @@ int main(int argc, const char * argv[]) {
     };
 
     std::cout << fixed_len_sizeof(&record);
+    std::cout << "\n";
     return 0;
 }
