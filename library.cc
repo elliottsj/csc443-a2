@@ -1,18 +1,10 @@
+#include <iostream>
 #include <numeric>
 #include <vector>
 #include <stdlib.h>
 #include <cmath>
-
-typedef const char* V;
-typedef std::vector<V> Record;
-
-typedef struct {
-    void *data; // Points to a byte array (Record).
-    int page_size; // The total page_size, implicitly includes size_of_directory
-    int slot_size; // How big a Record is.
-    int size_of_directory; // The size of our directory in bytes.
-} Page;
-
+#include <cstring>
+#include "library.h"
 
 /**
   * Returns result plus length of current.
@@ -34,12 +26,16 @@ int fixed_len_sizeof(Record *record) {
  * Serialize the record to a byte array to be stored in buf.
  */
 void fixed_len_write(Record *record, void *buf) {
+    std::cout << "fixed_len_write(record," << buf << ")\n";
     // iterate through the record
-    for (int j = 0; j < record->size(); j++){
+    std::cout << "record->size() == " << record->size() << "\n";
+    for (unsigned int j = 0; j < record->size(); j++){
         // copy the string into the buf
         int string_length = std::strlen(record->at(j));
         int position = (j * string_length);
+        std::cout << "memcpy(buf + " << position << ",record->at(" << j << ")," << string_length << ")\n";
         std::memcpy((char*) buf + position, record->at(j), string_length);
+        std::cout << "memcpy end\n";
     }
 };
 
@@ -49,7 +45,7 @@ void fixed_len_write(Record *record, void *buf) {
  */
 void fixed_len_read(void *buf, int size, Record *record) {
     int value_length = size / record->size();
-    for (int i = 0; i < record->size(); i++) {
+    for (unsigned int i = 0; i < record->size(); i++) {
         std::memcpy((void *) record->at(i), ((char *) buf) + i * value_length, value_length);
     }
 }
@@ -101,8 +97,7 @@ void init_fixed_len_page(Page *page, int page_size, int slot_size){
     // size_of_directory is in bytes
     page->size_of_directory = std::ceil(num_slots/8);
 
-    void *new_data = malloc(page_size);
-    page->data = new_data;
+    page->data = malloc(page_size);
 
     // Insert directory at the end of the page.
     init_directory(page);
@@ -133,6 +128,7 @@ int fixed_len_page_freeslots(Page *page){
  * Write a record into a given slot.
  */
 void write_fixed_len_page(Page *page, int slot, Record *r){
+    std::cout << "write_fixed_len_page\n";
     // get the slot
     unsigned char* slot_in_page = ((unsigned char *) page->data) + page->slot_size * slot;
     // serialize the data in r and write to slot_in_page
@@ -146,12 +142,13 @@ void write_fixed_len_page(Page *page, int slot, Record *r){
  *   -1 if unsuccessful (page full)
  */
 int add_fixed_len_page(Page *page, Record *r){
+    std::cout << "add_fixed_len_page\n";
     // get free slot
     unsigned char* directory = ((unsigned char *) page->data) + page->page_size;
     int first_free_slot = -1;
     for (int i = page->size_of_directory - 1; i >= 0;i--){
         for (int j = 7; j >= 0; j--){
-            char shifted = directory[i] >> j;
+            char shifted = directory[i - 1] >> j;
             if ((shifted & 1) == 0){
                 first_free_slot = j;
                 break;
