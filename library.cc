@@ -1,6 +1,7 @@
 #include <iostream>
 #include <numeric>
 #include <vector>
+#include <algorithm>
 #include <stdlib.h>
 #include <cmath>
 #include <cstring>
@@ -26,7 +27,6 @@ int fixed_len_sizeof(Record *record) {
  * Serialize the record to a byte array to be stored in buf.
  */
 void fixed_len_write(Record *record, void *buf) {
-    // iterate through the record
     for (unsigned int j = 0; j < record->size(); j++){
         // copy the string into the buf
         int string_length = std::strlen(record->at(j));
@@ -37,12 +37,13 @@ void fixed_len_write(Record *record, void *buf) {
 
 /**
  * Deserializes `size` bytes from the buffer, `buf`, and
- * stores the record in `record`.
+ * stores the data in `record`.
  */
 void fixed_len_read(void *buf, int size, Record *record) {
-    int value_length = size / record->size();
-    for (unsigned int i = 0; i < record->size(); i++) {
-        std::memcpy((void *) record->at(i), ((char *) buf) + i * value_length, value_length);
+    record->reserve(100);
+    for (int i = 0; i < 100; i++) {
+        // TODO: dont think this is working the way we want it to :(
+        record->push_back((char*)buf + i);
     }
 }
 
@@ -185,6 +186,7 @@ int add_fixed_len_page(Page *page, Record *r){
 void read_fixed_len_page(Page *page, int slot, Record *r){
     // get the data slot in the page
     char* data_slot = ((char *) page->data) + page->slot_size * slot;
+
     // serialize the data at the dataslot and store in r
     fixed_len_read(data_slot, page->slot_size, r);
 }

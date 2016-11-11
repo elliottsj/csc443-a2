@@ -1,5 +1,6 @@
 *.dSYM/
 
+example_page_file
 /library.o
 /experiment_fixed_len_sizeof
 /write_fixed_len_pages
