@@ -26,16 +26,12 @@ int fixed_len_sizeof(Record *record) {
  * Serialize the record to a byte array to be stored in buf.
  */
 void fixed_len_write(Record *record, void *buf) {
-    std::cout << "fixed_len_write(record," << buf << ")\n";
     // iterate through the record
-    std::cout << "record->size() == " << record->size() << "\n";
     for (unsigned int j = 0; j < record->size(); j++){
         // copy the string into the buf
         int string_length = std::strlen(record->at(j));
         int position = (j * string_length);
-        std::cout << "memcpy(buf + " << position << ",record->at(" << j << ")," << string_length << ")\n";
         std::memcpy((char*) buf + position, record->at(j), string_length);
-        std::cout << "memcpy end\n";
     }
 };
 
@@ -95,7 +91,7 @@ void init_fixed_len_page(Page *page, int page_size, int slot_size){
     page->page_size = page_size;
     page->slot_size = slot_size;
     // size_of_directory is in bytes
-    page->size_of_directory = std::ceil(num_slots/8);
+    page->size_of_directory = std::ceil(num_slots/(double)8);
 
     page->data = malloc(page_size);
 
@@ -128,7 +124,6 @@ int fixed_len_page_freeslots(Page *page){
  * Write a record into a given slot.
  */
 void write_fixed_len_page(Page *page, int slot, Record *r){
-    std::cout << "write_fixed_len_page\n";
     // get the slot
     unsigned char* slot_in_page = ((unsigned char *) page->data) + page->slot_size * slot;
     // serialize the data in r and write to slot_in_page
@@ -142,10 +137,10 @@ void write_fixed_len_page(Page *page, int slot, Record *r){
  *   -1 if unsuccessful (page full)
  */
 int add_fixed_len_page(Page *page, Record *r){
-    std::cout << "add_fixed_len_page\n";
     // get free slot
     unsigned char* directory = ((unsigned char *) page->data) + page->page_size;
     int first_free_slot = -1;
+
     for (int i = page->size_of_directory - 1; i >= 0;i--){
         for (int j = 7; j >= 0; j--){
             char shifted = directory[i - 1] >> j;

@@ -10,7 +10,7 @@ int main(int argc, const char * argv[]) {
     }
     std::string csv_filename(argv[1]);
     std::string page_filename(argv[2]);
-    int page_size = std::stoi(argv[3]);
+    int page_size = std::stoi(argv[3]); // 4096 for example
 
     // Open the page file for writing
     std::ofstream page_file;
