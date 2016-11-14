@@ -21,6 +21,7 @@ int main(int argc, const char * argv[]) {
     std::string line;
     Page page;
     int should_create_new_page = 1;
+
     while (std::getline(csv_file, line)) {
         std::stringstream linestr(line);
         std::string cell;
@@ -31,22 +32,25 @@ int main(int argc, const char * argv[]) {
             record.push_back(cell.c_str());
         }
 
-        std::cout << "Read record\n";
-
-        // If page is not initialized, initialize it
+        // First run, the page will not be initialized
         if (should_create_new_page) {
-            std::cout << "Initializing page\n";
-            // Create a page
             init_fixed_len_page(&page, page_size, fixed_len_sizeof(&record));
-            std::cout << "Initialized page\n";
         }
         should_create_new_page = add_fixed_len_page(&page, &record) == -1;
-        std::cout << "Added page\n";
         int should_write_page = should_create_new_page;
+
+        // if -1, init a new page and add this record to it
+        if (should_create_new_page) {
+            init_fixed_len_page(&page, page_size, fixed_len_sizeof(&record));
+            add_fixed_len_page(&page, &record);
+            should_create_new_page = 0;
+        }
+
         if (should_write_page) {
             // Write page.data to page_file
             page_file.write((const char *) page.data, page.page_size);
         }
+
     }
 
     if (!should_create_new_page) {

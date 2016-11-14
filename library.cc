@@ -65,9 +65,20 @@ int fixed_len_page_capacity(Page *page){
  *  A directory which holds a 0 if a slot is empty or a 1 if the slot has data.
  */
 void init_directory(Page *page){
-    for (int i = 0; i < page->size_of_directory;i++) {
-        char* b = ((char *) page->data) + page->page_size - page->size_of_directory + i;
-        *b = 0;
+    // First byte in directory: set leading bits to match slot count
+    // e.g. if there are 11 data slots, directory should look like:
+    // 1111 1000 0000 0000
+    unsigned char *first_byte = ((unsigned char *) page->data) + page->page_size - page->size_of_directory;
+    // Number of bits to set is number of directory bits minus number of data slots
+    // e.g. 16 - 11 == 5
+    int num_bits_to_set = (8 * page->size_of_directory) - fixed_len_page_capacity(page);
+    // Set first byte by shifting (8 - num_bits_to_set) zeros to the left
+    *first_byte = 0xFF << (8 - num_bits_to_set);
+
+    // Set all subsequent bytes to 0
+    for (int i = 1; i < page->size_of_directory; i++) {
+        unsigned char *byte = ((unsigned char *) page->data) + page->page_size - i;
+        *byte = 0;
     }
 }
 
@@ -141,11 +152,19 @@ int add_fixed_len_page(Page *page, Record *r){
     unsigned char* directory = ((unsigned char *) page->data) + page->page_size;
     int first_free_slot = -1;
 
+    // return early if no free pages
+    if (fixed_len_page_freeslots(page) == 0){
+        return first_free_slot;
+    }
+
     for (int i = page->size_of_directory - 1; i >= 0;i--){
         for (int j = 7; j >= 0; j--){
             char shifted = directory[i - 1] >> j;
             if ((shifted & 1) == 0){
                 first_free_slot = j;
+                // turn the bit at j to 1 from 0
+                unsigned char bit_to_change = 0x1 << j;
+                directory[i - 1] = directory[i - 1] | bit_to_change;
                 break;
             }
         }
