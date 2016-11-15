@@ -1,5 +1,7 @@
 #include <vector>
 
+
+// PAGE
 typedef const char* V;
 typedef std::vector<V> Record;
 
@@ -8,7 +10,38 @@ typedef struct {
     int page_size; // The total page_size, implicitly includes size_of_directory
     int slot_size; // How big a Record is.
     int size_of_directory; // The size of our directory in bytes.
+    bool next_directory;
 } Page;
+
+
+// HEAPFILE
+
+typedef struct {
+    FILE *file_ptr;
+    int page_size;
+} Heapfile;
+
+// unique across the entire heapfile
+typedef int PageID;
+
+typedef struct {
+    int page_id;
+    int slot;
+} RecordID;
+
+class RecordIterator {
+    public:
+    RecordIterator(Heapfile *heapfile);
+    Record next();
+    bool hasNext();
+    Page get_next_directory_page();
+    Page get_next_data_page();
+    Heapfile *heapfile;
+    Page current_directory;
+    int current_data_slot; // what data_page slot we are at in this directory
+    Page current_data;
+    int current_record_slot; // what record slot we are at in this data_page
+};
 
 /**
  * Compute the number of bytes required to serialize record
