@@ -36,7 +36,7 @@ class RecordIterator {
     bool hasNext();
     Page get_next_directory_page();
     Page get_next_data_page();
-    Heapfile *heapfile;
+    Heapfile *current_heapfile;
     Page current_directory;
     int current_data_slot; // what data_page slot we are at in this directory
     Page current_data;
@@ -69,3 +69,4 @@ void read_fixed_len_page(Page *page, int slot, Record *r);
 
 // heapfiles
 void init_heapfile(Heapfile *heapfile, int page_size, FILE *file);
+PageID alloc_page(Heapfile *heapfile);

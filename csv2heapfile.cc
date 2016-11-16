@@ -23,5 +23,7 @@ int main(int argc, const char * argv[]) {
     Heapfile heapfile;
     init_heapfile(&heapfile, page_size, heapfile_pointer);
 
+    alloc_page(&heapfile);
+
     return 0;
 }

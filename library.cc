@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstring>
 #include "library.h"
+#include <assert.h>
 
 /**
  * Print the current errno and exit with status 1.
@@ -172,9 +173,6 @@ void write_fixed_len_page(Page *page, int slot, Record *r){
  *   -1 if unsuccessful (page full)
  */
 int add_fixed_len_page(Page *page, Record *record){
-    // get free slot
-    uint8_t* directory = ((uint8_t *) page->data) + page->page_size;
-
     // return early if no free pages
     if (fixed_len_page_freeslots(page) == 0){
         return -1;
@@ -209,8 +207,8 @@ void read_fixed_len_page(Page *page, int slot, Record *r){
  */
 void append_empty_directory(Heapfile *heapfile) {
     Page directory_page;
-    init_fixed_len_page(&directory_page, page_size, /* slot_size: */ 1000);
-    if (fwrite((const char *) directory_page.data, page_size, 1, file) < 1) {
+    init_fixed_len_page(&directory_page, heapfile->page_size, /* slot_size: */ 1000);
+    if (fwrite((const char *) directory_page.data, heapfile->page_size, 1, heapfile->file_ptr) < 1) {
         error("append_empty_directory fwrite");
     }
 }
@@ -373,7 +371,7 @@ void write_page(Page *page, Heapfile *heapfile, PageID pid){
  * Sets up methods next() to return the first record in the heapfile.
  */
 RecordIterator::RecordIterator(Heapfile *heapfile){
-    heapfile = heapfile;
+    current_heapfile = heapfile;
 
     // get directory page
     Page directory_page;
@@ -407,14 +405,14 @@ RecordIterator::RecordIterator(Heapfile *heapfile){
 
 Page RecordIterator::get_next_directory_page(){
     Page new_directory_page;
-    init_fixed_len_page(&new_directory_page, heapfile->page_size, 1000);
+    init_fixed_len_page(&new_directory_page, current_heapfile->page_size, 1000);
 
     fread(
         new_directory_page.data,
-        heapfile->page_size,
+        current_heapfile->page_size,
         1,
         // where the new directory will be
-        heapfile->file_ptr + (heapfile->page_size * fixed_len_page_capacity(&current_directory)) + 1
+        current_heapfile->file_ptr + (current_heapfile->page_size * fixed_len_page_capacity(&current_directory)) + 1
     );
 
     return new_directory_page;
@@ -425,9 +423,9 @@ Page RecordIterator::get_next_data_page(){
     read_fixed_len_page(&current_directory, current_data_slot, &new_record);
 
     Page new_data_page;
-    init_fixed_len_page(&new_data_page, heapfile->page_size, 1000);
+    init_fixed_len_page(&new_data_page, current_heapfile->page_size, 1000);
     int offset = atoi(new_record.at(1));
-    fread(new_data_page.data, heapfile->page_size, 1, heapfile->file_ptr + offset);
+    fread(new_data_page.data, current_heapfile->page_size, 1, current_heapfile->file_ptr + offset);
 
     return new_data_page;
 }
@@ -444,12 +442,12 @@ Record RecordIterator::next(){
         if (current_data_slot > fixed_len_page_capacity(&current_directory)) {
             // calcuate offset to next directory_page
             // TODO: what if there is no next directory_page???
-            Page new_directory_page;
+            // Page new_directory_page;
             current_directory = get_next_directory_page();
             current_data_slot = 0;
         }
         // get next data_page
-        Page new_data_page;
+        // Page new_data_page;
         current_data = get_next_data_page();
         // move data_slot up one
         current_data_slot += 1;
