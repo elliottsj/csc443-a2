@@ -8,6 +8,14 @@
 #include "library.h"
 
 /**
+ * Print the current errno and exit with status 1.
+ */
+void error(const char *message) {
+    perror(message);
+    exit(1);
+}
+
+/**
   * Returns result plus length of current.
   */
 int sum_strlen(int result, const char* current) {
