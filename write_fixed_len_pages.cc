@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include "library.h"
+#include <sys/timeb.h>
 
 int main(int argc, const char * argv[]) {
     if (argc < 4) {
@@ -21,6 +22,11 @@ int main(int argc, const char * argv[]) {
     std::string line;
     Page page;
     int should_create_new_page = 1;
+
+    // start timer
+    struct timeb t;
+    ftime(&t);
+    unsigned long start_ms = t.time * 1000 + t.millitm;
 
     while (std::getline(csv_file, line)) {
         std::stringstream linestr(line);
@@ -60,9 +66,13 @@ int main(int argc, const char * argv[]) {
 
     page_file.close();
 
+    // stop timer
+    ftime(&t);
+    unsigned long stop_ms = t.time * 1000 + t.millitm;
+
     std::cout << "NUMBER OF RECORDS: " << 1000 << "\n";
     std::cout << "NUMBER OF PAGES: " << 32 << "\n";
-    std::cout << "TIME: " << 43 << " milliseconds\n";
+    std::cout << "TIME: " << stop_ms - start_ms << " milliseconds\n";
 
     return 0;
 }
