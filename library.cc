@@ -304,6 +304,8 @@ PageID alloc_page(Heapfile *heapfile) {
  * heapfile actual file, we can just skip ahead and not need to read each directory page
  * as we can do math to find where page is
 
+ * fseek to error
+
  * General strategy:
  * - pid is an index of where the page is in all of the data page_sizes
  * - Can figure out how many data_pages are in each set between directory pages
@@ -321,18 +323,15 @@ void read_page(Heapfile *heapfile, PageID pid, Page *page){
     //how many directory pages are we away from the beginning?
     // TODO: Can we assume this? Are we suppose to look into directory records
     // to find offsets?
-    int directory_offset = 0;
+    int directory_offset = 1;
 
-    while (pid > number_of_data_pages){
-        number_of_data_pages = pid - number_of_data_pages;
-        directory_offset += 1;
-    }
+    directory_offset += pid / number_of_data_pages;
     init_fixed_len_page(page, heapfile->page_size, 1000);
     fread(
         directory_page.data,
         heapfile->page_size,
         1,
-        heapfile->file_ptr + (heapfile->page_size * (directory_offset * number_of_data_pages)) // calculation of where the data_page will be
+        heapfile->file_ptr + (heapfile->page_size * (directory_offset + pid)) // calculation of where the data_page will be
     );
 }
 
