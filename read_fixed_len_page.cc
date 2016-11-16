@@ -20,7 +20,7 @@ int main(int argc, const char * argv[]) {
     int page_size = std::stoi(argv[2]);
 
     std::ifstream page_file;
-    page_file.open(page_filename, std::ios::out | std::ios::binary);
+    page_file.open(page_filename, std::ios::in | std::ios::binary);
 
     // switch this to tuples2.csv to see output
     FILE * dev_null = fopen("/dev/null", "w");
@@ -28,7 +28,7 @@ int main(int argc, const char * argv[]) {
     int slot_size = 1000;
     int num_slots = page_size/slot_size;
 
-    while (true){
+    while (!page_file.eof()){
         Page page;
         // Initialize the page
         init_fixed_len_page(&page, page_size, 1000);
@@ -51,11 +51,9 @@ int main(int argc, const char * argv[]) {
             }
             fputs("\n", dev_null);
         }
-
-        if(page_file.eof()){
-            break;
-        }
     }
     fclose(dev_null);
     page_file.close();
+
+    return 0;
 }

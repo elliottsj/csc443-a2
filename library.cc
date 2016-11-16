@@ -42,7 +42,8 @@ void fixed_len_write(Record *record, void *buf) {
 void fixed_len_read(void *buf, int size, Record *record) {
     record->reserve(100);
     for (int i = 0; i < 100; i++) {
-        // TODO: dont think this is working the way we want it to :(
+        // char * buf_value = NULL;
+        // memcpy(buf_value, (char*)buf + i, 1);
         record->push_back((char*)buf + i);
     }
 }
@@ -185,8 +186,7 @@ int add_fixed_len_page(Page *page, Record *r){
  */
 void read_fixed_len_page(Page *page, int slot, Record *r){
     // get the data slot in the page
-    char* data_slot = ((char *) page->data) + page->slot_size * slot;
-
+    char* data_slot = ((char *) page->data) + (page->slot_size * slot);
     // serialize the data at the dataslot and store in r
     fixed_len_read(data_slot, page->slot_size, r);
 }
