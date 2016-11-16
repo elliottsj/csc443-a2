@@ -2,10 +2,19 @@
 #include <numeric>
 #include <vector>
 #include <algorithm>
+#include <stdint.h>
 #include <stdlib.h>
 #include <cmath>
 #include <cstring>
 #include "library.h"
+
+/**
+ * Print the current errno and exit with status 1.
+ */
+void error(const char *message) {
+    perror(message);
+    exit(1);
+}
 
 /**
   * Returns result plus length of current.
@@ -70,7 +79,7 @@ void init_directory(Page *page){
     // First byte in directory: set leading bits to match slot count
     // e.g. if there are 11 data slots, directory should look like:
     // 1111 1000 0000 0000
-    unsigned char *first_byte = ((unsigned char *) page->data) + page->page_size - page->size_of_directory;
+    uint8_t *first_byte = ((uint8_t *) page->data) + page->page_size - page->size_of_directory;
     // Number of bits to set is number of directory bits minus number of data slots
     // e.g. 16 - 11 == 5
     int num_bits_to_set = (8 * page->size_of_directory) - fixed_len_page_capacity(page);
@@ -79,7 +88,7 @@ void init_directory(Page *page){
 
     // Set all subsequent bytes to 0
     for (int i = 1; i < page->size_of_directory; i++) {
-        unsigned char *byte = ((unsigned char *) page->data) + page->page_size - i;
+        uint8_t *byte = ((uint8_t *) page->data) + page->page_size - i;
         *byte = 0;
     }
 }
@@ -112,22 +121,35 @@ void init_fixed_len_page(Page *page, int page_size, int slot_size){
     init_directory(page);
 };
 
+/**
+ * Return the position of the first free slot in the given page.
+ * Return -1 if none exist.
+ */
+int fixed_len_page_find_freeslot(Page *page) {
+    uint8_t* directory = ((uint8_t *) page->data) + page->page_size - page->size_of_directory;
+    for (int i = 0; i < page->size_of_directory; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (((directory[page->size_of_directory - i - 1] >> j) & 1) == 0) {
+                return (8 * i) + j;
+            }
+        }
+    }
+    return -1;
+}
 
 /**
  * Calculate the free space (number of free slots) in the page.data
-
  * Returns:
  *  Number of free slots.
  */
-int fixed_len_page_freeslots(Page *page){
+int fixed_len_page_freeslots(Page *page) {
     int freeslots = 0;
     // get the directory
-    unsigned char* directory = ((unsigned char *) page->data) + page->page_size - page->size_of_directory;
+    uint8_t* directory = ((uint8_t *) page->data) + page->page_size - page->size_of_directory;
     // traverse the directory and calculate the number of free slots
     for (int i = 0; i < page->size_of_directory;i++){
-        for (int j = 0;j < 8;j++) {
-            char shifted = directory[i] >> j;
-            freeslots += (shifted & 1) == 0;
+        for (int j = 0; j < 8; j++) {
+            freeslots += ((directory[i] >> j) & 1) == 0;
         }
     }
     return freeslots;
@@ -138,7 +160,7 @@ int fixed_len_page_freeslots(Page *page){
  */
 void write_fixed_len_page(Page *page, int slot, Record *r){
     // get the slot
-    unsigned char* slot_in_page = ((unsigned char *) page->data) + page->slot_size * slot;
+    uint8_t* slot_in_page = ((uint8_t *) page->data) + page->slot_size * slot;
     // serialize the data in r and write to slot_in_page
     fixed_len_write(r, (void *) slot_in_page);
 }
@@ -151,29 +173,17 @@ void write_fixed_len_page(Page *page, int slot, Record *r){
  */
 int add_fixed_len_page(Page *page, Record *record){
     // get free slot
-    unsigned char* directory = ((unsigned char *) page->data) + page->page_size;
-    int first_free_slot = -1;
+    uint8_t* directory = ((uint8_t *) page->data) + page->page_size;
 
     // return early if no free pages
     if (fixed_len_page_freeslots(page) == 0){
-        return first_free_slot;
+        return -1;
     }
 
-    for (int i = page->size_of_directory - 1; i >= 0;i--){
-        for (int j = 7; j >= 0; j--){
-            char shifted = directory[i - 1] >> j;
-            if ((shifted & 1) == 0){
-                first_free_slot = j;
-                // turn the bit at j to 1 from 0
-                unsigned char bit_to_change = 0x1 << j;
-                directory[i - 1] = directory[i - 1] | bit_to_change;
-                break;
-            }
-        }
-        if (first_free_slot != -1){
-            break;
-        }
-    }
+    // Find the first free slot and set its bit in the directory
+    int first_free_slot = fixed_len_page_find_freeslot(page);
+    uint8_t *directory_entry = ((uint8_t *) page->data) + page->page_size - 1 - first_free_slot / 8;
+    *directory_entry |= (first_free_slot % 8);
 
     // write the record to the slot
     write_fixed_len_page(page, first_free_slot, record);
@@ -195,80 +205,93 @@ void read_fixed_len_page(Page *page, int slot, Record *r){
 // Heap file functions, maybe put this in a new file?
 
 /**
+ * Append an empty directory to the given heapfile.
+ */
+void append_empty_directory(Heapfile *heapfile) {
+    Page directory_page;
+    init_fixed_len_page(&directory_page, page_size, /* slot_size: */ 1000);
+    if (fwrite((const char *) directory_page.data, page_size, 1, file) < 1) {
+        error("append_empty_directory fwrite");
+    }
+}
+
+/**
  * Initialize a heapfile to use the file and page size given.
  */
 void init_heapfile(Heapfile *heapfile, int page_size, FILE *file){
     heapfile->file_ptr = file;
     heapfile->page_size = page_size;
 
-    // init directory
-    Page directory_page;
-    init_fixed_len_page(&directory_page, page_size, 1000);
-    directory_page.next_directory = false;
-
-    // write directory to file
-    fwrite((const char *) directory_page.data, page_size, 1, file);
+    append_empty_directory(heapfile);
 }
 
 /**
  * Allocate another page in the heapfile. This grows the file by a page.
  */
-PageID alloc_page(Heapfile *heapfile){
+PageID alloc_page(Heapfile *heapfile) {
     PageID page_id = 0;
+    int directory_free_slot = -1;
 
-    int is_free_space = 0;
-
-    // get start of file
-    int curr_heapfile_ptr = 0;
-
-    // iterate until we find a directory with free space
-    // TODO: what if we have no free space?
+    // Iterate until we find a directory with free space
     Page directory_page;
-    while(!is_free_space){
-        // get directory
-        init_fixed_len_page(&directory_page, heapfile->page_size, 1000);
-        // TODO: rewrite this to use fseek
-        fread(directory_page.data, heapfile->page_size, 1, heapfile->file_ptr + curr_heapfile_ptr);
-        is_free_space = fixed_len_page_freeslots(&directory_page) != 0;
-        // if we are going to go to the next directory slot, add to page_id
-        int total_slots = fixed_len_page_capacity(&directory_page);
-
-        if (!is_free_space){
-            page_id += total_slots;
-            // move pointer to where the next directory would be
-            curr_heapfile_ptr += heapfile->page_size * (total_slots + 1);
+    while (feof(heapfile->file_ptr) != 0 && directory_free_slot == -1) {
+        // While we have not reached the end of the heap file and have not yet found a directory with free space
+        // Read a directory from the heap file
+        init_fixed_len_page(&directory_page, heapfile->page_size, /* slot_size: */ 1000);
+        if (fread(directory_page.data, heapfile->page_size, 1, heapfile->file_ptr) < 1 && ferror(heapfile->file_ptr) != 0) {
+            error("fread");
+        }
+        directory_free_slot = fixed_len_page_find_freeslot(&directory_page);
+        int page_capacity = fixed_len_page_capacity(&directory_page);
+        if (directory_free_slot == -1) {
+            // Current directory has no free space available
+            page_id += page_capacity;
+            // Advance file position to the next directory
+            if (fseek(heapfile->file_ptr, heapfile->page_size * page_capacity, SEEK_CUR) != 0) {
+                error("next directory fseek");
+            }
         }
     }
 
-    // we now have a directory with free space! yupii!
+    if (directory_free_slot == -1) {
+        // All directories are full; add a new directory
+        append_empty_directory(heapfile);
+    }
 
-    // create a new record to be put into directory_page
+    // We now have a directory with free space
+
+    // Create a new data page
+    Page data_page;
+    init_fixed_len_page(&data_page, heapfile->page_size, /* slot_size: */ 1000);
+
+    // Create a new record to be put into directory_page
     Record record;
 
     // {freespace, page_offset} is used so we can re-use Record struct!
 
-    // create new data page
-    Page data_page;
-    init_fixed_len_page(&data_page, heapfile->page_size, 1000);
-
     // freespace is just capacity as nothing is inserted into this new data_page
-    int freespace = fixed_len_page_capacity(&data_page);
+    int freespace = fixed_len_page_capacity(&directory_page);
     std::string freespace_string = std::to_string(freespace);
     record.push_back(freespace_string.c_str());
 
-    // add record to directory_page for the new data_page we are allocating
+    // Calculate offset in bytes
+    int offset = heapfile->page_size * (directory_free_slot + 1);
+    std::string offset_str = std::to_string(offset);
+    record.push_back(offset_str.c_str());
+
+    // Add record to directory_page for the new data_page we are allocating
     int slot_written_to = add_fixed_len_page(&directory_page, &record);
+    assert(directory_free_slot == slot_written_to);
 
-    // calculate offset
-    int offset = heapfile->page_size * (slot_written_to + 1);
-    std::string page_size_string = std::to_string(offset);
-    record.push_back(page_size_string.c_str());
+    // Write new data page to correct spot in heapfile
+    if (fseek(heapfile->file_ptr, offset, SEEK_CUR) != 0) {
+        error("data page fseek");
+    }
+    if (fwrite((const char *) data_page.data, heapfile->page_size, 1, heapfile->file_ptr) < 1) {
+        error("data page fwrite");
+    }
 
-    // write new data page to correct spot in heapfile
-    curr_heapfile_ptr += offset;
-    fwrite(data_page.data, heapfile->page_size, 1, heapfile->file_ptr);
-
-    // free_slot we put data_page into will be the index
+    // Free slot we put data_page into will be the index
     page_id += slot_written_to;
 
     return page_id;
