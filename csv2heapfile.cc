@@ -14,7 +14,7 @@ int main(int argc, const char * argv[]) {
 
     // Open the page file for writing
     FILE * heapfile_pointer;
-    heapfile_pointer = std::fopen(heapfile_filename.c_str(), "wb");
+    heapfile_pointer = std::fopen(heapfile_filename.c_str(), "w+b");
 
     // Read the CSV file line-by-line:
     std::ifstream csv_file(csv_filename);

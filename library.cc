@@ -63,7 +63,7 @@ void fixed_len_read(void *buf, int size, Record *record) {
  * Calculates the maximal number of records that fit in a page
  */
 int fixed_len_page_capacity(Page *page){
-    int num_slots = page->page_size/page->slot_size;
+    int num_slots = page->page_size / page->slot_size;
 
     // find out how many slots our directory is going to need
     int number_of_directory_slots = std::ceil(page->size_of_directory / page->slot_size);
@@ -221,6 +221,11 @@ void init_heapfile(Heapfile *heapfile, int page_size, FILE *file){
     heapfile->page_size = page_size;
 
     append_empty_directory(heapfile);
+
+    // Seek to start of file
+    if (fseek(heapfile->file_ptr, 0, SEEK_SET) != 0) {
+        error("append_empty_directory fseek");
+    }
 }
 
 /**
@@ -232,12 +237,12 @@ PageID alloc_page(Heapfile *heapfile) {
 
     // Iterate until we find a directory with free space
     Page directory_page;
-    while (feof(heapfile->file_ptr) != 0 && directory_free_slot == -1) {
+    while (feof(heapfile->file_ptr) == 0 && directory_free_slot == -1) {
         // While we have not reached the end of the heap file and have not yet found a directory with free space
         // Read a directory from the heap file
         init_fixed_len_page(&directory_page, heapfile->page_size, /* slot_size: */ 1000);
         if (fread(directory_page.data, heapfile->page_size, 1, heapfile->file_ptr) < 1 && ferror(heapfile->file_ptr) != 0) {
-            error("fread");
+            error("read directory page fread");
         }
         directory_free_slot = fixed_len_page_find_freeslot(&directory_page);
         int page_capacity = fixed_len_page_capacity(&directory_page);
