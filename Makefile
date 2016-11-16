@@ -43,4 +43,4 @@ select3: select3.cc library.o
 	$(CC) $(CXXFLAGS) -o $@ $< library.o
 
 sync-ellio128:
-	fswatch -e "\.git" -e "venv" . | while read line; do rsync -avz --delete . ellio128@teach.cs.toronto.edu:csc443/csc443-a2; done
+	fswatch -e "\.git" -e "venv" . | while read line; do rsync -avz --delete --exclude-from=.gitignore . ellio128@teach.cs.toronto.edu:csc443/csc443-a2; done
