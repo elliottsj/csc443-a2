@@ -300,6 +300,14 @@ PageID alloc_page(Heapfile *heapfile) {
     return page_id;
 }
 
+int get_heap_position(Heapfile *heapfile, PageID pid, int number_of_data_pages){
+    int directory_offset = 1;
+
+    directory_offset += pid / number_of_data_pages;
+
+    return (heapfile->page_size * (directory_offset + pid));
+}
+
 /**
  * Read a page into memory.
  * Takes the page from the heapfile and puts it into page.
@@ -328,15 +336,17 @@ void read_page(Heapfile *heapfile, PageID pid, Page *page){
     //how many directory pages are we away from the beginning?
     // TODO: Can we assume this? Are we suppose to look into directory records
     // to find offsets?
-    int directory_offset = 1;
+    int position = get_heap_position(heapfile, pid, number_of_data_pages);
 
-    directory_offset += pid / number_of_data_pages;
     init_fixed_len_page(page, heapfile->page_size, 1000);
+    if (fseek(heapfile->file_ptr, position, SEEK_SET) != 0) {
+        error("data page fseek");
+    }
     fread(
         directory_page.data,
         heapfile->page_size,
         1,
-        heapfile->file_ptr + (heapfile->page_size * (directory_offset + pid)) // calculation of where the data_page will be
+        heapfile->file_ptr
     );
 }
 
@@ -353,18 +363,16 @@ void write_page(Page *page, Heapfile *heapfile, PageID pid){
 
     int number_of_data_pages = fixed_len_page_capacity(&directory_page);
 
-    int directory_offset = 0;
+    int position = get_heap_position(heapfile, pid, number_of_data_pages);
 
-    while (pid > number_of_data_pages){
-        number_of_data_pages = pid - number_of_data_pages;
-        directory_offset += 1;
+    if (fseek(heapfile->file_ptr, position, SEEK_SET) != 0) {
+        error("data page fseek");
     }
-
     fwrite(
         page->data,
         heapfile->page_size,
         1,
-        heapfile->file_ptr + (heapfile->page_size * (directory_offset * number_of_data_pages))
+        heapfile->file_ptr
     );
 }
 

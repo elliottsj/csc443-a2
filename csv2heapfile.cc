@@ -30,8 +30,9 @@ int main(int argc, const char * argv[]) {
 
     // convert data_file to use new heapfile format
 
-    Page data_page;
-    void * page_data = fread(data_page, heapfile.page_size, 1, data_file);
+    // for (int i = 0;i < heapfile->page_size * )
+    // Page data_page;
+    // void * page_data = fread(data_page, heapfile.page_size, 1, data_file);
 
     // write_page(Page *page, Heapfile *heapfile, PageID pid)
 
