@@ -66,3 +66,6 @@ int fixed_len_page_freeslots(Page *page);
 void write_fixed_len_page(Page *page, int slot, Record *r);
 int add_fixed_len_page(Page *page, Record *r);
 void read_fixed_len_page(Page *page, int slot, Record *r);
+
+// heapfiles
+void init_heapfile(Heapfile *heapfile, int page_size, FILE *file);
