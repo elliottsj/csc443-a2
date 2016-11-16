@@ -278,7 +278,7 @@ PageID alloc_page(Heapfile *heapfile) {
     record.push_back(freespace_string.c_str());
 
     // Calculate offset in bytes
-    int offset = heapfile->page_size * (directory_free_slot + 1);
+    int offset = heapfile->page_size * directory_free_slot;
     std::string offset_str = std::to_string(offset);
     record.push_back(offset_str.c_str());
 
