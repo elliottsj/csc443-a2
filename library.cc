@@ -398,15 +398,14 @@ RecordIterator::RecordIterator(Heapfile *heapfile){
     Record record;
     read_fixed_len_page(&directory_page, current_data_slot, &record);
 
-    current_data_slot += 1;
-
     // get data_page at offset
-    int offset = atoi(record.at(1));
+    int offset = atoi(record.at(1)); //this should be end of directory
+    assert(offset == 0);
 
     // init data_page
     Page data_page;
     init_fixed_len_page(&data_page, heapfile->page_size, 1000);
-    fread(data_page.data, heapfile->page_size, 1, heapfile->file_ptr + offset);
+    fread(data_page.data, heapfile->page_size, 1, heapfile->file_ptr);
 
     // set current_page
     current_data = data_page;
@@ -423,8 +422,7 @@ Page RecordIterator::get_next_directory_page(){
         new_directory_page.data,
         current_heapfile->page_size,
         1,
-        // where the new directory will be
-        current_heapfile->file_ptr + (current_heapfile->page_size * fixed_len_page_capacity(&current_directory)) + 1
+        current_heapfile->file_ptr
     );
 
     return new_directory_page;
@@ -436,8 +434,8 @@ Page RecordIterator::get_next_data_page(){
 
     Page new_data_page;
     init_fixed_len_page(&new_data_page, current_heapfile->page_size, 1000);
-    int offset = atoi(new_record.at(1));
-    fread(new_data_page.data, current_heapfile->page_size, 1, current_heapfile->file_ptr + offset);
+
+    fread(new_data_page.data, current_heapfile->page_size, 1, current_heapfile->file_ptr);
 
     return new_data_page;
 }
@@ -449,17 +447,15 @@ Page RecordIterator::get_next_data_page(){
  */
 Record RecordIterator::next(){
     // check if we are out of records for this current_data page
-    if (current_record_slot > fixed_len_page_capacity(&current_data)) {
+    if (current_record_slot >= fixed_len_page_capacity(&current_data)) {
         // check if we are out of data_pages for this current_directory page
-        if (current_data_slot > fixed_len_page_capacity(&current_directory)) {
+        if (current_data_slot >= fixed_len_page_capacity(&current_directory)) {
             // calcuate offset to next directory_page
             // TODO: what if there is no next directory_page???
-            // Page new_directory_page;
             current_directory = get_next_directory_page();
             current_data_slot = 0;
         }
         // get next data_page
-        // Page new_data_page;
         current_data = get_next_data_page();
         // move data_slot up one
         current_data_slot += 1;
@@ -471,7 +467,7 @@ Record RecordIterator::next(){
     Record record;
     read_fixed_len_page(&current_data, current_data_slot, &record);
 
-    current_data_slot += 1;
+    current_record_slot += 1;
 
     return record;
 }
