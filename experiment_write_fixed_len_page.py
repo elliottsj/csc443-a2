@@ -34,8 +34,8 @@ def main():
     I would assume we can only do this if we make tuples.csv larger.
 
     """
-    if len(sys.argv) < 4:
-        print('Usage: experiment_get_histogram <csv_file> <output_file>')
+    if len(sys.argv) < 3:
+        print('Usage: experiment_write_fixed_len_page <csv_file> <output_file>')
         sys.exit(1)
     csv_file = sys.argv[1]
     output_file = sys.argv[2]

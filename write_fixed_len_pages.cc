@@ -1,8 +1,8 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include "library.h"
 #include <sys/timeb.h>
+#include "library.h"
 
 int main(int argc, const char * argv[]) {
     if (argc < 4) {

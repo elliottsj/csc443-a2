@@ -181,7 +181,7 @@ int add_fixed_len_page(Page *page, Record *record){
     // Find the first free slot and set its bit in the directory
     int first_free_slot = fixed_len_page_find_freeslot(page);
     uint8_t *directory_entry = ((uint8_t *) page->data) + page->page_size - 1 - first_free_slot / 8;
-    *directory_entry |= (first_free_slot % 8);
+    *directory_entry |= (1 << (first_free_slot % 8));
 
     // write the record to the slot
     write_fixed_len_page(page, first_free_slot, record);
@@ -445,7 +445,7 @@ Page RecordIterator::get_next_data_page(){
  * TODO: dont assume we have records in each data_page slot
  * TODO: what if we are at the last data_page in the current_directory?
  */
-Record RecordIterator::next(){
+Record RecordIterator::next() {
     // check if we are out of records for this current_data page
     if (current_record_slot >= fixed_len_page_capacity(&current_data)) {
         // check if we are out of data_pages for this current_directory page
@@ -454,11 +454,12 @@ Record RecordIterator::next(){
             // TODO: what if there is no next directory_page???
             current_directory = get_next_directory_page();
             current_data_slot = 0;
+        } else {
+            // move data_slot up one
+            current_data_slot += 1;
         }
         // get next data_page
         current_data = get_next_data_page();
-        // move data_slot up one
-        current_data_slot += 1;
         // reset record slot as we are beginning from the start again
         current_record_slot = 0;
     }
@@ -476,7 +477,7 @@ Record RecordIterator::next(){
 /**
  * Returns True if the RecordIterator has a value for next().
  */
-bool RecordIterator::hasNext(){
+bool RecordIterator::hasNext() {
     Page temp_current_data;
     temp_current_data = current_data;
 
@@ -485,9 +486,9 @@ bool RecordIterator::hasNext(){
     int capacity_of_data_page = fixed_len_page_capacity(&current_data);
     // if we are currently outside the current_data pages capacity
     // need to keep check if the next data_page has a record in its first slot
-    if (current_record_slot > capacity_of_data_page) {
+    if (current_record_slot >= capacity_of_data_page) {
         // check if we are out of data_pages for this current_directory page
-        if (current_data_slot > fixed_len_page_capacity(&current_directory)) {
+        if (current_data_slot >= fixed_len_page_capacity(&current_directory)) {
             // calcuate offset to next directory_page
             // TODO: what if there is no next directory_page???
             get_next_directory_page();
@@ -495,8 +496,6 @@ bool RecordIterator::hasNext(){
 
         // get next data_page
         temp_current_data = get_next_data_page();
-
-        temp_current_record_slot = 0;
     }
 
     int freespace_in_data_page = fixed_len_page_freeslots(&temp_current_data);
@@ -505,5 +504,16 @@ bool RecordIterator::hasNext(){
         return false;
     }
 
-    return true;
+
+    uint8_t* directory = ((uint8_t *) temp_current_data.data) + temp_current_data.page_size - temp_current_data.size_of_directory;
+    int directory_byte_index = current_data.size_of_directory - current_record_slot / 8 - 1;
+    int j = 0;
+    for (int i = directory_byte_index; i < temp_current_data.size_of_directory && (8 * i) + j < capacity_of_data_page; i++) {
+        for (j = 0; j < 8 && (8 * i) + j < capacity_of_data_page; j++) {
+            if (((directory[temp_current_data.size_of_directory - i - 1] >> j) & 1) == 1) {
+                return true;
+            }
+        }
+    }
+    return false;
 }

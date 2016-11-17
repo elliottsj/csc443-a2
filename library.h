@@ -70,3 +70,4 @@ void read_fixed_len_page(Page *page, int slot, Record *r);
 // heapfiles
 void init_heapfile(Heapfile *heapfile, int page_size, FILE *file);
 PageID alloc_page(Heapfile *heapfile);
+void write_page(Page *page, Heapfile *heapfile, PageID pid);
