@@ -23,10 +23,10 @@ int main(int argc, const char * argv[]) {
     page_file.open(page_filename, std::ios::in | std::ios::binary);
 
     // switch this to tuples2.csv to see output
-    FILE * dev_null = fopen("/dev/null", "w");
+    FILE * dev_null = fopen("tuples2.csv", "w");
 
-    int slot_size = 1000;
-    int num_slots = page_size/slot_size;
+    // int slot_size = 1000;
+    // int num_slots = page_size/slot_size;
 
     while (!page_file.eof()){
         Page page;
@@ -37,7 +37,7 @@ int main(int argc, const char * argv[]) {
         page_file.read((char *) page.data, page_size);
 
         // Read each record from the page.data and serialize into csv form for output!
-        for (int i = 0;i < num_slots;i++) {
+        for (int i = 0; i < fixed_len_page_capacity(&page); i++) {
             // now that we have the data in the page,
             // deserialize each slot in the page to get records!
             Record record;
@@ -45,12 +45,15 @@ int main(int argc, const char * argv[]) {
 
             // output record data to dev_null
             for (unsigned int j = 0; j < record.size(); j++) {
-                fputs(record.at(j), dev_null);
+                std::cout << record.at(j);
+                // fputs(record.at(j), dev_null);
                 if (j != record.size() - 1){
-                    fputs(",", dev_null);
+                    std::cout << ",";
+                    // fputs(",", dev_null);
                 }
             }
-            fputs("\n", dev_null);
+            std::cout << "\n";
+            // fputs("\n", dev_null);
         }
     }
     fclose(dev_null);

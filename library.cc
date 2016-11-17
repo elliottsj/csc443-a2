@@ -52,9 +52,10 @@ void fixed_len_write(Record *record, void *buf) {
 void fixed_len_read(void *buf, int size, Record *record) {
     record->reserve(100);
     for (int i = 0; i < 100; i++) {
-        // char * buf_value = NULL;
-        // memcpy(buf_value, (char*)buf + i, 1);
-        record->push_back((char*)buf + i);
+        char *temp = (char *) malloc(11);
+        memcpy(temp, (char*)buf + 10 * i, 10);
+        temp[10] = '\0';
+        record->push_back(temp);
     }
 }
 
