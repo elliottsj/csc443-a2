@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <istream>
+#include <sys/timeb.h>
 #include "library.h"
 #include <string>
 
@@ -19,6 +20,11 @@ int main(int argc, const char * argv[]) {
     std::string page_filename(argv[1]);
     int page_size = std::stoi(argv[2]);
 
+    // start timer
+    struct timeb t;
+    ftime(&t);
+    unsigned long start_ms = t.time * 1000 + t.millitm;
+
     std::ifstream page_file;
     page_file.open(page_filename, std::ios::in | std::ios::binary);
 
@@ -27,6 +33,10 @@ int main(int argc, const char * argv[]) {
 
     // int slot_size = 1000;
     // int num_slots = page_size/slot_size;
+
+    // for output
+    int number_of_records = 0;
+    int number_of_pages = 0;
 
     while (!page_file.eof()){
         Page page;
@@ -52,12 +62,21 @@ int main(int argc, const char * argv[]) {
                     // fputs(",", dev_null);
                 }
             }
-            std::cout << "\n";
-            // fputs("\n", dev_null);
+            fputs("\n", dev_null);
+            number_of_records += 1;
         }
+        number_of_pages += 1;
     }
     fclose(dev_null);
     page_file.close();
+
+    // stop timer
+    ftime(&t);
+    unsigned long stop_ms = t.time * 1000 + t.millitm;
+
+    std::cout << "NUMBER OF RECORDS: " << number_of_records << "\n";
+    std::cout << "NUMBER OF PAGES: " << number_of_pages << "\n";
+    std::cout << "TIME: " << stop_ms - start_ms << " milliseconds\n";
 
     return 0;
 }
