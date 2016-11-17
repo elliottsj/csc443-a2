@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <sys/timeb.h>
+#include <cstring>
 #include "library.h"
 
 int main(int argc, const char * argv[]) {
@@ -39,7 +40,9 @@ int main(int argc, const char * argv[]) {
         // Read cells into a Record
         Record record;
         while (std::getline(linestr, cell, ',')) {
-            record.push_back(cell.c_str());
+            char *temp = (char *) malloc(11);
+            std::strncpy(temp, cell.c_str(), 11);
+            record.push_back(temp);
         }
 
         // First run, the page will not be initialized
@@ -49,21 +52,17 @@ int main(int argc, const char * argv[]) {
         }
         should_create_new_page = add_fixed_len_page(&page, &record) == -1;
         number_of_records += 1;
-        int should_write_page = should_create_new_page;
 
         // if -1, init a new page and add this record to it
         if (should_create_new_page) {
+            // Write page.data to page_file
+            page_file.write((const char *) page.data, page.page_size);
+
             init_fixed_len_page(&page, page_size, fixed_len_sizeof(&record));
             add_fixed_len_page(&page, &record);
             should_create_new_page = 0;
             number_of_pages += 1;
         }
-
-        if (should_write_page) {
-            // Write page.data to page_file
-            page_file.write((const char *) page.data, page.page_size);
-        }
-
     }
 
     if (!should_create_new_page) {
